@@ -5,19 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>CareSlot – Book a doctor appointment</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header><div class="wrap bar">
   <div class="logo"><i aria-hidden="true"></i>CareSlot</div>
-  <nav role="tablist" aria-label="Sections">
+  <nav id="nav" class="hidden" role="tablist" aria-label="Sections">
     <button role="tab" id="tab-book" aria-selected="true">Book a visit</button>
     <button role="tab" id="tab-mine" aria-selected="false">My appointments<span class="count" id="count">0</span></button>
   </nav>
+  <div class="user hidden" id="user"><span id="uname"></span><button class="link" id="logout">Log out</button></div>
 </div></header>
 
 <main class="wrap">
-<section id="view-book">
+<section id="view-auth" class="hidden">
+  <div class="auth">
+    <h2 id="atitle">Welcome back</h2>
+    <p class="sub">Log in to book and manage your appointments.</p>
+    <div class="seg" role="tablist" aria-label="Log in or sign up">
+      <button id="s-in" role="tab" aria-selected="true">Log in</button>
+      <button id="s-up" role="tab" aria-selected="false">Sign up</button>
+    </div>
+    <div id="f-name" class="hidden"><input id="aname" placeholder="Full name" autocomplete="name" aria-label="Full name"><p class="err" id="ea0"></p></div>
+    <input id="aemail" type="email" placeholder="Email" autocomplete="email" aria-label="Email"><p class="err" id="ea1"></p>
+    <input id="apass" type="password" placeholder="Password (min 6 characters)" autocomplete="current-password" aria-label="Password"><p class="err" id="ea2"></p>
+    <button class="btn" id="asubmit">Log in</button>
+  </div>
+</section>
+
+<section id="view-book" class="hidden">
   <div class="hero">
     <h1>See a doctor this week, without the phone queue.</h1>
     <p>Choose a specialty, pick a doctor, and reserve a time that works for you.</p>
@@ -33,7 +49,7 @@
   <div class="hero"><h1>Your appointments</h1><p>Upcoming visits are listed first. Cancel anytime to free the slot.</p></div>
   <div class="appts" id="appts"></div>
 </section>
-<p class="note">Demo only: appointments are saved in this browser and no real bookings are made.</p>
+<p class="note">Demo only: accounts and appointments are stored in this browser and no real bookings are made. Please do not use a real password.</p>
 </main>
 <div class="toast" id="toast" role="status"></div>
 
