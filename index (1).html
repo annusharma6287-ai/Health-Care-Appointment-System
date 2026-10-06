@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CareSlot – Book a doctor appointment</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header><div class="wrap bar">
+  <div class="logo"><i aria-hidden="true"></i>CareSlot</div>
+  <nav role="tablist" aria-label="Sections">
+    <button role="tab" id="tab-book" aria-selected="true">Book a visit</button>
+    <button role="tab" id="tab-mine" aria-selected="false">My appointments<span class="count" id="count">0</span></button>
+  </nav>
+</div></header>
+
+<main class="wrap">
+<section id="view-book">
+  <div class="hero">
+    <h1>See a doctor this week, without the phone queue.</h1>
+    <p>Choose a specialty, pick a doctor, and reserve a time that works for you.</p>
+  </div>
+  <div class="chips" id="chips" role="group" aria-label="Filter by specialty"></div>
+  <div class="layout">
+    <div class="docs" id="docs"></div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+</section>
+
+<section id="view-mine" class="hidden">
+  <div class="hero"><h1>Your appointments</h1><p>Upcoming visits are listed first. Cancel anytime to free the slot.</p></div>
+  <div class="appts" id="appts"></div>
+</section>
+<p class="note">Demo only: appointments are saved in this browser and no real bookings are made.</p>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
