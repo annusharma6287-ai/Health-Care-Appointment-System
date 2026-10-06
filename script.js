@@ -54,7 +54,7 @@ function renderPanel(){
     <span class="label">Choose a day</span><div class="days">${days}</div>
     <span class="label">Choose a time</span><div class="slots">${slots}</div>
     <span class="label" style="margin-top:18px">Patient details</span>
-    <input id="pname" placeholder="Full name" autocomplete="name" aria-label="Full name"><p class="err" id="e1"></p>
+    <input id="pname" value="${esc(user?user.name:"")}" placeholder="Full name" autocomplete="name" aria-label="Full name"><p class="err" id="e1"></p>
     <input id="pphone" placeholder="Mobile number (10 digits)" inputmode="numeric" autocomplete="tel" aria-label="Mobile number"><p class="err" id="e2"></p>
     <textarea id="preason" rows="2" placeholder="Reason for visit (optional)" aria-label="Reason for visit"></textarea>
     <button class="btn" id="confirm" ${state.time?"":"disabled"}>${state.time?"Confirm appointment":"Pick a time to continue"}</button>`;
@@ -64,6 +64,7 @@ function renderPanel(){
 }
 function keepForm(fn){const v=["pname","pphone","preason"].map(i=>$(i).value);fn();["pname","pphone","preason"].forEach((i,k)=>$(i).value=v[k])}
 function confirmBooking(){
+  if(!user){show("auth");return}
   const name=$("pname").value.trim(),phone=$("pphone").value.replace(/\s/g,"");
   let ok=true;
   $("e1").textContent=name.length<2?(ok=false,"Enter the patient's full name."):"";
@@ -71,13 +72,13 @@ function confirmBooking(){
   if(!ok)return;
   if(taken(state.doc,state.date,state.time)){toast("That time was just taken. Pick another.");state.time=null;renderPanel();return}
   const d=DOCTORS.find(x=>x.id===state.doc);
-  appts.push({id:Date.now(),docId:d.id,doctor:d.name,spec:d.spec,fee:d.fee,date:state.date,time:state.time,name,phone,reason:$("preason").value.trim()});
+  appts.push({id:Date.now(),owner:user.email,docId:d.id,doctor:d.name,spec:d.spec,fee:d.fee,date:state.date,time:state.time,name,phone,reason:$("preason").value.trim()});
   save();toast("Booked with "+d.name+" on "+fmtDate(state.date)+" at "+fmtTime(state.time));
   state.time=null;renderPanel();renderAppts();show("mine");
 }
 function renderAppts(){
-  const up=[...appts].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-  $("count").textContent=appts.length;
+  const up=appts.filter(a=>user&&a.owner===user.email).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  $("count").textContent=up.length;
   $("appts").innerHTML=up.length?up.map(a=>`<div class="appt">
     <div class="when">${fmtDate(a.date)}<br>${fmtTime(a.time)}</div>
     <div class="info"><b>${esc(a.doctor)}</b><small>${esc(a.spec)} · ₹${a.fee}</small><small>Patient: ${esc(a.name)} · ${esc(a.phone)}</small>${a.reason?`<small>Reason: ${esc(a.reason)}</small>`:""}</div>
@@ -90,9 +91,75 @@ function renderAppts(){
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function show(v){
-  $("view-book").classList.toggle("hidden",v!=="book");$("view-mine").classList.toggle("hidden",v!=="mine");
+  ["book","mine","auth"].forEach(k=>$("view-"+k).classList.toggle("hidden",k!==v));
   $("tab-book").setAttribute("aria-selected",v==="book");$("tab-mine").setAttribute("aria-selected",v==="mine");
   window.scrollTo({top:0});
 }
+$("tab-book").onclick=()=>show("book");$("tab-mine").onclick=()=>show("mine");
+renderChips();renderDocs();
+
+/* ---------- Login / Sign up (frontend only, stored in this browser) ---------- */
+const UKEY="careslot.users.v1",SKEY="careslot.session.v1";
+let user=null,mode="in";
+function getUsers(){try{return JSON.parse(localStorage.getItem(UKEY))||{}}catch(e){return {}}}
+function setUsers(u){try{localStorage.setItem(UKEY,JSON.stringify(u))}catch(e){}}
+async function hashPw(pw,salt){
+  try{
+    const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(salt+pw));
+    return [...new Uint8Array(buf)].map(x=>x.toString(16).padStart(2,"0")).join("");
+  }catch(e){return String(hash(salt+pw))}
+}
+function setMode(m){
+  mode=m;
+  $("s-in").setAttribute("aria-selected",m==="in");$("s-up").setAttribute("aria-selected",m==="up");
+  $("f-name").classList.toggle("hidden",m!=="up");
+  $("atitle").textContent=m==="in"?"Welcome back":"Create your account";
+  $("asubmit").textContent=m==="in"?"Log in":"Sign up";
+  ["ea0","ea1","ea2"].forEach(i=>$(i).textContent="");
+}
+async function submitAuth(){
+  const name=$("aname").value.trim(),email=$("aemail").value.trim().toLowerCase(),pw=$("apass").value;
+  let ok=true;
+  ["ea0","ea1","ea2"].forEach(i=>$(i).textContent="");
+  if(mode==="up"&&name.length<2){$("ea0").textContent="Enter your full name.";ok=false}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){$("ea1").textContent="Enter a valid email address.";ok=false}
+  if(pw.length<6){$("ea2").textContent="Password must be at least 6 characters.";ok=false}
+  if(!ok)return;
+  const users=getUsers();
+  if(mode==="up"){
+    if(users[email]){$("ea1").textContent="This email is already registered. Try logging in.";return}
+    const salt=String(Date.now())+Math.random();
+    users[email]={name,salt,hash:await hashPw(pw,salt)};
+    setUsers(users);login(email,name);toast("Account created. Welcome, "+name+"!");
+  }else{
+    const u=users[email];
+    if(!u||u.hash!==await hashPw(pw,u.salt)){$("ea2").textContent="Incorrect email or password.";return}
+    login(email,u.name);toast("Welcome back, "+u.name+"!");
+  }
+}
+function login(email,name){
+  user={email,name};
+  try{localStorage.setItem(SKEY,email)}catch(e){}
+  $("aname").value="";$("aemail").value="";$("apass").value="";
+  applyAuth();renderPanel();renderAppts();show("book");
+}
+function logout(){
+  user=null;state.doc=null;state.time=null;
+  try{localStorage.removeItem(SKEY)}catch(e){}
+  applyAuth();renderDocs();renderPanel();renderAppts();setMode("in");show("auth");toast("You have logged out.");
+}
+function applyAuth(){
+  $("nav").classList.toggle("hidden",!user);$("user").classList.toggle("hidden",!user);
+  if(user)$("uname").textContent="Hi, "+user.name.split(" ")[0];
+}
+function init(){
+  try{const em=localStorage.getItem(SKEY),u=getUsers()[em];if(u)user={email:em,name:u.name}}catch(e){}
+  applyAuth();renderPanel();renderAppts();show(user?"book":"auth");
+}
+$("s-in").onclick=()=>setMode("in");$("s-up").onclick=()=>setMode("up");
+$("asubmit").onclick=submitAuth;$("logout").onclick=logout;
+["aname","aemail","apass"].forEach(i=>$(i).addEventListener("keydown",e=>{if(e.key==="Enter")submitAuth()}));
+init();
+
 $("tab-book").onclick=()=>show("book");$("tab-mine").onclick=()=>show("mine");
 renderChips();renderDocs();renderPanel();renderAppts();
